@@ -23,5 +23,5 @@ Tambien esta el archivo **recompile.sh** el cual es tiene la funcion de facilita
 
 # Imagenes
 
-[](./imagenes/ls_foto.png)<br><br>
-[](./imagenes/cat_foto.png)
+![](./imagenes/ls_foto.png)<br><br>
+![](./imagenes/cat_foto.png)
