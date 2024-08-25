@@ -21,6 +21,14 @@ sys_getpid(void)
   return myproc()->pid;
 }
 
+uint64 // my func
+sys_getppid(void)
+{
+  struct proc *cur_process = myproc();
+  struct proc *parent = cur_process->parent; 
+  return parent->pid;
+}
+
 uint64
 sys_fork(void)
 {

@@ -1,3 +1,5 @@
+#include "../kernel/types.h"
+
 struct stat;
 
 // system calls
@@ -19,6 +21,7 @@ int mkdir(const char*);
 int chdir(const char*);
 int dup(int);
 int getpid(void);
+int getppid(void); //my func
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
