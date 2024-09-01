@@ -34,6 +34,7 @@ entry("chdir");
 entry("dup");
 entry("getpid");
 entry("getppid"); #my func
+entry("getancestor"); #my func
 entry("sbrk");
 entry("sleep");
 entry("uptime");

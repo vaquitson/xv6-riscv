@@ -21,3 +21,4 @@
 #define SYS_mkdir   20
 #define SYS_close   21
 #define SYS_getppid 22 // my func
+#define SYS_getancestor 23 // my func

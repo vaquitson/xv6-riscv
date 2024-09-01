@@ -29,6 +29,28 @@ sys_getppid(void)
   return parent->pid;
 }
 
+uint64 // my func
+sys_getancestor()
+{
+  int ancestor;
+  argint(0, &ancestor);
+  struct proc *cur_process = myproc();
+
+  if (ancestor == 0){
+    return cur_process->pid;
+  } else if (ancestor < 0){
+    return -1;
+  }
+
+  for (int i = 0; i < ancestor; i++){
+    if (cur_process->pid <= 1){
+      return -1;
+    }
+    cur_process =  cur_process->parent;
+  }
+  return cur_process->pid;
+}
+
 uint64
 sys_fork(void)
 {
