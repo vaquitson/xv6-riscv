@@ -10,6 +10,9 @@ struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
 
+int curPrioToRun = 0;
+
+
 struct proc *initproc;
 
 int nextpid = 1;
@@ -109,21 +112,50 @@ allocpid()
 static struct proc*
 allocproc(void)
 {
+  struct proc *p_;
   struct proc *p;
 
-  for(p = proc; p < &proc[NPROC]; p++) {
-    acquire(&p->lock);
-    if(p->state == UNUSED) {
-      goto found;
-    } else {
-      release(&p->lock);
+  int foundFlag = 0;
+
+  for(p_ = proc; p_ < &proc[NPROC]; p_++) {
+    acquire(&p_->lock);
+
+    if (p_->state == RUNNABLE || p_->state == RUNNING){
+      // actualizar prioridades de procesos RUNNABLE cada vez que entra
+      // un nuevo proceso
+      p_->priority += p_->boost;
+      if (p_->priority == 9){
+        p_->boost = -1;
+      } else if (p_->priority == 0){
+        p_->boost = 1;
+      }
+      //printf("process %d: prio: %d\n", p_->pid, p_->priority);
     }
+
+    if(p_->state == UNUSED) {
+      // consegimos una direccion de memoria sin usar
+      p = p_;
+      foundFlag = 1;
+      //goto found;
+    }
+    release(&p_->lock);
+  }
+
+  if (foundFlag == 1){
+    //printf("\n");
+    acquire(&p->lock);
+    goto found;
   }
   return 0;
 
 found:
   p->pid = allocpid();
   p->state = USED;
+
+  p->priority = 0; // inicializar priority
+  p->boost = 1;    // inicializar boost
+  
+  curPrioToRun = 0;// cambiamos la prioridad de busqueda a 0
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -446,7 +478,6 @@ scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
-
   c->proc = 0;
   for(;;){
     // The most recent process to run may have had interrupts
@@ -455,23 +486,41 @@ scheduler(void)
     intr_on();
 
     int found = 0;
-    for(p = proc; p < &proc[NPROC]; p++) {
+    int foundMatchingPriority = 0;
+
+    for(p = proc; p < &proc[NPROC]; p++) { 
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
+        if (curPrioToRun == p->priority){
+          // Switch to chosen process.  It is the process's job
+          // to release its lock and then reacquire it
+          // before jumping back to us.
+          p->state = RUNNING;
+          c->proc = p;
 
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->proc = 0;
+          printf("proces: %d prio: %d\n", p->pid, p->priority);
+          swtch(&c->context, &p->context);
+          // Process is done running for now.
+          // It should have changed its p->state before coming back.
+          c->proc = 0;
+
+          foundMatchingPriority = 1;
+        }
         found = 1;
       }
       release(&p->lock);
     }
+    
+    // si no encontramos nada con la prioridad actual, aumentamos la prioridad que buscamos
+    if (foundMatchingPriority == 0){
+      //printf("prioToRun: %d\n", curPrioToRun);
+      curPrioToRun++;
+      // si la prioridad es mayor a la maxima, volvemos a 0
+      if (curPrioToRun > 9){
+        curPrioToRun = 0;
+      }
+    }
+
     if(found == 0) {
       // nothing to run; stop running on this core until an interrupt.
       intr_on();
