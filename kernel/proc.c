@@ -507,18 +507,8 @@ scheduler(void)
           foundMatchingPriority = 1;
         }
         found = 1;
-      }
+      } 
       release(&p->lock);
-    }
-    
-    // si no encontramos nada con la prioridad actual, aumentamos la prioridad que buscamos
-    if (foundMatchingPriority == 0){
-      //printf("prioToRun: %d\n", curPrioToRun);
-      curPrioToRun++;
-      // si la prioridad es mayor a la maxima, volvemos a 0
-      if (curPrioToRun > 9){
-        curPrioToRun = 0;
-      }
     }
 
     if(found == 0) {
@@ -526,6 +516,17 @@ scheduler(void)
       intr_on();
       asm volatile("wfi");
     }
+    
+    // si no encontramos nada con la prioridad actual, aumentamos la prioridad que buscamos
+    if (foundMatchingPriority == 0){
+
+      curPrioToRun++;
+      // si la prioridad es mayor a la maxima, volvemos a 0
+      if (curPrioToRun > 9){
+        curPrioToRun = 0;
+      }
+    }
+
   }
 }
 
