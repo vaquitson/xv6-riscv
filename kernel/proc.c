@@ -10,8 +10,8 @@ struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
 
-int curPrioToRun = 0;
-
+int curPrio;
+int foundMatchingPriority;
 
 struct proc *initproc;
 
@@ -155,7 +155,8 @@ found:
   p->priority = 0; // inicializar priority
   p->boost = 1;    // inicializar boost
   
-  curPrioToRun = 0;// cambiamos la prioridad de busqueda a 0
+  curPrio = 0;// cambiamos la prioridad de busqueda a 0
+  foundMatchingPriority = 0;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -481,8 +482,6 @@ scheduler(void)
   c->proc = 0;
 
   int found;
-  int foundMatchingPriority;
-  int i;
   for(;;){
     // The most recent process to run may have had interrupts
     // turned off; enable them to avoid a deadlock if all
@@ -491,19 +490,19 @@ scheduler(void)
 
     found = 0;
 
-    for (i = 0; i < 10; i++){
+    for (curPrio = 0; curPrio < 10; curPrio++){
       foundMatchingPriority = 0;
       for(p = proc; p < &proc[NPROC]; p++){ 
         acquire(&p->lock);
         if(p->state == RUNNABLE) {
-          if (p->priority == i){
+          if (p->priority == curPrio){
             // Switch to chosen process.  It is the process's job
             // to release its lock and then reacquire it
             // before jumping back to us.
             p->state = RUNNING;
             c->proc = p;
-
-            printf("proces: %d prio: %d\n", p->pid, p->priority);
+            // print the prio when running
+            printf("proces: %d prio: %d boost: %d\n", p->pid, p->priority, p->boost);
             swtch(&c->context, &p->context);
             // Process is done running for now.
             // It should have changed its p->state before coming back.
@@ -512,15 +511,17 @@ scheduler(void)
             foundMatchingPriority = 1;
           }
           found = 1;
-        } else if (p->priority < i && p->state == RUNNABLE){
-          i = 0;
+        // control de seguridad
+        } else if (p->priority < curPrio && p->state == RUNNABLE){
+          curPrio = 0;
           p = proc;
         } 
         release(&p->lock);
       }
       if (foundMatchingPriority == 1){
         // si encontramos algun proceso en esta prioridad que sea RUNNABLE
-        i--;
+        foundMatchingPriority = 0;
+        curPrio--;
       }
     }
 
@@ -611,6 +612,7 @@ sleep(void *chan, struct spinlock *lk)
   // so it's okay to release lk.
 
   acquire(&p->lock);  //DOC: sleeplock1
+  printf("sleeping %d\n", p->pid);
   release(lk);
 
   // Go to sleep.
@@ -632,12 +634,15 @@ sleep(void *chan, struct spinlock *lk)
 void
 wakeup(void *chan)
 {
+  curPrio = 0;
+  foundMatchingPriority = 0;
   struct proc *p;
 
   for(p = proc; p < &proc[NPROC]; p++) {
     if(p != myproc()){
       acquire(&p->lock);
       if(p->state == SLEEPING && p->chan == chan) {
+        printf("awake %d\n", p->pid);
         p->state = RUNNABLE;
       }
       release(&p->lock);
