@@ -13,6 +13,12 @@ struct file {
 #define minor(dev)  ((dev) & 0xFFFF)
 #define	mkdev(m,n)  ((uint)((m)<<16| (n)))
 
+#define NO_PERMISION 0
+#define READ_O 1
+#define WRITE_O 2
+#define READ_WRITE 3
+#define INMUTABLE 4
+
 // in-memory copy of an inode
 struct inode {
   uint dev;           // Device number
@@ -20,6 +26,8 @@ struct inode {
   int ref;            // Reference count
   struct sleeplock lock; // protects everything below here
   int valid;          // inode has been read from disk?
+  
+  int prtotection;    // bits for protection of the file
 
   short type;         // copy of disk inode
   short major;

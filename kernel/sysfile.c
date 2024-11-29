@@ -271,6 +271,7 @@ create(char *path, short type, short major, short minor)
   ip->major = major;
   ip->minor = minor;
   ip->nlink = 1;
+  ip->prtotection = READ_WRITE; // inicializamos la variable de proteccion en 3
   iupdate(ip);
 
   if(type == T_DIR){  // Create . and .. entries.
@@ -341,13 +342,36 @@ sys_open(void)
     return -1;
   }
 
-  if((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0){
-    if(f)
-      fileclose(f);
+
+  // si el archvio tiene algun permiso de escritura lanzamos error
+  if (ip->prtotection == READ_O && (omode & (O_WRONLY | O_RDWR | O_TRUNC)) > 0){
     iunlockput(ip);
     end_op();
     return -1;
   }
+
+  if (ip->prtotection == INMUTABLE && (omode & (O_WRONLY | O_RDWR | O_TRUNC)) > 0){
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+
+  // si el archivo tiene algun permiso de lectura lanzamos un error
+  if (ip->prtotection == WRITE_O && (omode & (O_RDONLY | O_RDWR)) > 0){
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+
+  if((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0){
+    if(f){
+      fileclose(f);
+    }
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+
 
   if(ip->type == T_DEVICE){
     f->type = FD_DEVICE;
@@ -368,6 +392,57 @@ sys_open(void)
   end_op();
 
   return fd;
+}
+
+
+uint64 sys_chmode(void){
+  char path[MAXPATH];
+  int permiso;
+  struct inode *ip;
+  int n;
+
+  if ((n = argstr(0, path, MAXPATH)) < 0){
+    return -1;
+  }
+
+  argint(1, &permiso);
+  
+  begin_op();
+  if ((ip = namei(path)) == 0){
+    end_op();
+    return -1;
+  }
+  ilock(ip);
+  if(ip->type == T_DIR){
+    iunlockput(ip);
+    end_op();
+    return -1;
+  };
+
+  if (ip->type == T_DEVICE){
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+
+  if (ip->prtotection == INMUTABLE){
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+
+  if (permiso < 0 || permiso > 4){
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+
+  ip->prtotection = permiso;
+  // string opcional para el teste de la proteccion, se puede borrar
+  printf("proteccion cambiada a %d\n", ip->prtotection);
+  iunlockput(ip);
+  end_op();
+  return 0;
 }
 
 uint64

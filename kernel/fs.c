@@ -658,24 +658,32 @@ namex(char *path, int nameiparent, char *name)
   else
     ip = idup(myproc()->cwd);
 
+  // vamos desglosando el path de atras para adelante
   while((path = skipelem(path, name)) != 0){
     ilock(ip);
+
+    // si el inodePointer no es un archivo y no es el final del paths
+    // salimos de la funcion con 0
     if(ip->type != T_DIR){
       iunlockput(ip);
       return 0;
     }
+  
     if(nameiparent && *path == '\0'){
       // Stop one level early.
       iunlock(ip);
       return ip;
     }
+
     if((next = dirlookup(ip, name, 0)) == 0){
       iunlockput(ip);
       return 0;
     }
+
     iunlockput(ip);
     ip = next;
   }
+
   if(nameiparent){
     iput(ip);
     return 0;

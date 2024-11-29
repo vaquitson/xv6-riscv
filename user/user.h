@@ -22,6 +22,7 @@ int chdir(const char*);
 int dup(int);
 int getpid(void);
 int getppid(void); //my func
+int chmode(char *path, int mode); //chmode
 char* sbrk(int);
 int sleep(int);
 int uptime(void);

@@ -96,6 +96,7 @@ extern uint64 sys_sbrk(void);
 extern uint64 sys_sleep(void);
 extern uint64 sys_uptime(void);
 extern uint64 sys_open(void);
+extern uint64 sys_chmode(void);
 extern uint64 sys_write(void);
 extern uint64 sys_mknod(void);
 extern uint64 sys_unlink(void);
@@ -122,6 +123,7 @@ static uint64 (*syscalls[])(void) = {
 [SYS_sleep]   sys_sleep,
 [SYS_uptime]  sys_uptime,
 [SYS_open]    sys_open,
+[SYS_chmode]  sys_chmode,
 [SYS_write]   sys_write,
 [SYS_mknod]   sys_mknod,
 [SYS_unlink]  sys_unlink,
